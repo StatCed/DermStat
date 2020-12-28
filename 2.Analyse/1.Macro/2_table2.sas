@@ -638,12 +638,12 @@ data &tableSortie;
 		%if %index(%upcase(&TypeEtude,I)) %then %do; 
 			 
 			%do i = 1 %to &NombreProduits;
-				if index(upcase(product), upcase("&&p&i")) ne 0 then productN = &&pN&i;
+				if index(upcase(product), upcase("&&pf&i")) ne 0 then productN = &&pN&i;
 			%end;
 
 			%do i=1 %to %eval(&NombreProduits-1);
 				%do j=%eval(&i+1) %to &NombreProduits;
-					if index(upcase(product), upcase("&&p&i.._&&p&j")) ne 0 then productN=%sysevalf(1000+100*&i+&j);
+					if index(upcase(product), upcase("&&pf&i.._&&pf&j")) ne 0 then productN=%sysevalf(1000+100*&i+&j);
 				%end;
 			%end;
 
