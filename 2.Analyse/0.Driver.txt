@@ -1,0 +1,77 @@
+
+*******************************************************************************
+
+OBJET : fichier "driver" qui donne les chemin d'accès au fichiers
+		de l'étude
+
+UTILISATION : renseigner les macro-variables 
+							chemin  
+							fichier_données
+
+EXEMPLE : 
+			%let chemin = D:\Statistiques\Data_SAS\2017\Avon\17E4571\2.Analyse\
+			%let fichier_données =	_17E4571.csv
+
+
+AUTEUR : Cédric Jung
+
+DATE  : 05/06/2018
+
+
+
+*******************************************************************************
+
+
+
+*-------------------------------------------------------------------
+Chemin spécifique à l étude analysée;
+%let chemin = %str(CHEMIN_DU_DOSSIER_ANALYSE_SAS);
+
+*---------------------------
+Fichier .csv données brutes;
+%let fichier_données = RAW_DATA.csv;
+
+
+*------------------------
+Bibliothèque des données;
+libname lib "&chemin.0.Data\1.DataSAS";
+
+*------------------------
+Bibliothèque des macros;
+libname macro "&chemin.1.Macro";
+*libname draft "D:\StructureEtude\1.XXEXXXX_Draft\2.Analyse\1.Macro";
+
+*---------------------------------------------------------
+Bibliothèque des varaibles d environnement et des formats;
+libname env "&chemin.0.Data\2.Environnement";
+
+
+*------------------------------------------------
+Chemin complet du Fichier .csv de données brutes;
+filename raw "&chemin.0.Data\&fichier_données";
+
+*-------------------------------------
+Répertoire des sortie RTF des données;
+%let output = %str(&chemin.3.Output\);
+
+
+*-----------------------
+Chargement des macros
+;
+*%include "&chemin.1.Macro\environnement.sas";
+*%include "&chemin.1.Macro\homog.sas";
+*%include "&chemin.1.Macro\3_evolution2_v0_1.sas";
+*%include "&chemin.1.Macro\10_descQual.sas";
+*%include "&chemin.1.Macro\2_stat_v0_1.sas";
+
+*-----------------------
+Chargement des styles
+;
+%include "&chemin.1.Macro\0.rtfstyle.sas";
+
+
+
+*Bibliothèque des macro-programmes;
+libname adhoc (/*draft*/ macro );
+options mstored sasmstore=adhoc;
+

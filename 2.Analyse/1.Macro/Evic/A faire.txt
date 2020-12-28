@@ -1,0 +1,8 @@
+
+1. vérifier que evic_rapport fournit tous les tableaux
+
+2. en fr + ang
+
+3. compléter evic_rapport pour les études corneo/Pie/sebumétrie
+
+4. etude sniff + scorage

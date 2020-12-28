@@ -1,0 +1,9 @@
+1. Mettre le plan exp en macro variable et le transmettre à la macro stat.
+
+2. faire une macro freq + macro freq_IC qui calcule les IC pour toutes les cat sans ce soucier de leur présence ou non
+
+3. faire de même pour le test du Chi2, ficher et binomial
+
+4. tout stocker dans une table
+
+5. proc report pour la mise en forme  

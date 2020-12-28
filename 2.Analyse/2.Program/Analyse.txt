@@ -1,0 +1,213 @@
+﻿
+
+ 
+*#############################################################
+
+PROGRAMME : ATABLE_SAS.sas
+
+OBJET: Analyse statistique de la table de données DTABLE_SAS
+
+DATE :
+
+AUTEUR :
+
+#############################################################;
+
+
+
+**************************************************************
+Chargement du pilote
+;
+
+%macro chargement_pilote();
+
+%if %symexist(chargement) = 0 %then %do; 
+	*Driver;
+	%include "CHEMIN_DRIVER";
+		%global chargement;
+		%let chargement	= OK;
+%end;
+
+%mend;
+
+%chargement_pilote();
+
+**************************************************************
+Chargement des macro-variables crées par la macro TABLE()
+;
+
+%environnement(f=env.FTABLE_SAS, table=env.ETABLE_SAS);
+
+
+**************************************************************
+Declaration des macro-variables
+;
+
+%let DATASET=lib.DTABLE_SAS;
+%let RTF=ATABLE_SAS;
+
+
+**************************************************************
+Nettoyage de la table de données
+;
+
+*
+Suppression des variations relatives 
+Suppression des comparaisons entre produits
+Suppression des compraison entre les temps post basales
+;
+
+data DATASET2;
+	drop type;
+	set &DATASET;
+	if type ne 'rel'; 
+	if product < 1000; 
+	if time < 2000;
+run;
+
+/*
+ods rtf file="&output.Exploration_&DATASET..rtf" notoc_data nogtitle bodytitle startpage=no;
+options mprint symbolgen mlogic; 
+%exploration (table=DATASET2,para=);
+ods rtf close;
+*/
+
+%macro boucle(table=DATASET2, deb=, fin=, dec=,f=0);
+
+%title(title=Homogeneity,level=1);
+
+			%Stat(table=&table,
+				numParametre= ,
+				format=8.&dec , 
+				sortieBrute= n,
+				TableauRapport= o,
+				Plan = &planExperimental,
+				stat =  1 2 3 4 6 7,
+				lang = ang,
+				tempsAvecComparaison=%str(time=1 and (product<1000 and statN = 7)=0),
+				leg=N
+			); 
+
+
+	%do i=&deb %to &fin;
+
+*Homogénéité : %str(time=1 and (product<1000 and statN = 7)=0);
+*Valeurs brutes : %str(time<1000 and product<1000 and statN ne 7);
+
+
+%title(title=&i. &&paraf&i,level=1);
+
+%title(title=&i..1 Descriptive statistics, level=2);
+
+			%Stat(table=&table,
+				numParametre=&i 	,
+				format=8.&dec, 
+				sortieBrute= n		,
+				TableauRapport= o	,
+				Plan = &planExperimental,
+				stat =  1 2 3 4 6 7,
+				lang = fr,
+				tempsAvecComparaison=%str(time<1000 and product<1000 and statN ne 7),
+				leg=N
+			); 
+
+
+
+%let f=%eval(&f+1);
+%title(title=Figure &f.. Box-plot of raw &&paraf&i value, level=1);
+
+title1 f=calibri h=10 pt j=left "The figure below shows the distribution of %lowcase(&&paraf&i) for each time point by zone.";  
+
+			data box_plot;
+				set &table;
+				if time < 1000 and product < 1000 and parameter=&i;
+			run; 
+
+			%distribution(table=box_plot,para=&i);
+title;
+
+%let f=%eval(&f+1);
+%title(title=Figure &f.. Change over time in &&paraf&i value, level=1);
+
+			%evolution(
+				table=&table,
+				para=&i,
+				echX=/*%str(values=(1 to 12 by 1) fitpolicy=rotate)*/,
+				echY=/*%str(values=(0 to 10 by 1))*/,
+				labX=Time (day),
+				labY=%str(&&paraf&i (*ESC*){unicode '000a'x}(mean ± 2*SEM)),
+				labGp=Product,
+				title=	%str(The figure below shows the evolution of the average value for the %lowcase(&&paraf&i) (± 2*SEM) over time, by zone.),
+				ft=timef.
+			);
+	
+
+%title(title=&i..2. Inferential analysis, level=1);
+
+			%Stat(table=&table,
+				numParametre=&i 	,
+				format=8.&dec, 
+				sortieBrute= n		,
+				TableauRapport= o	,
+				Plan = &planExperimental,
+				stat =  1 2 3 4 6 7,
+				lang = fr,
+				tempsAvecComparaison=%str(time>1000),
+				leg=Y
+			); 
+
+/*		
+%ANOVA(table= &table,
+	class = %str(parameter subject product time),
+	model = %str(value=product time product*time / ddfm=KR outp=resid_&&para&i ;),
+	random =%str(repeated  time product/sub=subject type=UN@cs),	
+	where = %str(where time<1000 and product <1000 and parameter=&i),
+	table_cont= comparaison,
+	log = log(value),
+	sqrt = sqrt(value), 
+	numParametre=&i, 
+	format=8.&dec, 
+	SortiesBrutes=non,
+	pol=calibri	,
+	tail=8	,
+	larg=1,
+	lang=ANG,
+	cont= 
+%str(
+lsmestimate	product*time	"&pf1 : &t2 - &t1"	-1 1 0	/cl;
+lsmestimate	product*time	"&pf1 : &t3 - &t1"	-1 0 1	/cl;
+
+lsmestimate	product*time	"&pf2 : &t2 - &t1"	0 0 0 	-1 1 0	/cl;
+lsmestimate	product*time	"&pf2 : &t3 - &t1"	0 0 0	-1 0 1	/cl;
+
+lsmestimate	product*time	"&pf1 vs &pf2 on (&t2 - &t1)"	  -1 1 0   1 -1 0	/cl;
+lsmestimate	product*time	"&pf1 vs &pf2 on (&t3 - &t1)"	  -1 0 1   1 0 -1 	/cl;
+)
+);
+*/
+
+*Enregistrement des moyennes ajustées pour vérification graphique;
+*data check&i;
+*	set contrast_&&para&i;
+*	parameter=&i;
+*	type='adjusted';
+*run;
+
+
+ods rtf startpage=now;
+
+	%end;
+
+%mend;
+
+
+
+ods rtf file="&output.&rtf..rtf" notoc_data nogtitle contents=yes bodytitle startpage=no style=sty.s4;
+
+%boucle(deb=1, fin=1, dec=2);
+
+ods rtf close;
+
+%no_section(&output.&rtf..rtf);
+
+
