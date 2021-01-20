@@ -40,18 +40,6 @@ Chargement des macro-variables crées par la macro TABLE()
 %environnement(f=env.FTABLE_SAS, table=env.ETABLE_SAS);
 
 
-**************************************************************
-Paramètres des graphiques
-;
-
-ods graphics on / 
-      width=4in
-      imagefmt=jpeg
-      imagemap=on
-      imagename="MyBoxplot"
-      border=off
-;
-
 
 **************************************************************
 Declaration des macro-variables
