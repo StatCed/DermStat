@@ -12,7 +12,8 @@ options mstored sasmstore=macro;
 	labGp=Product,
 	ft=timef.,
 	ref=,
-	err= stderr/*STDERR ou STDDEV*/
+	err= stderr/*STDERR ou STDDEV*/,
+	where= 
 ) /STORE SOURCE;
 
 /*
@@ -60,7 +61,8 @@ run;
  /* The SCATTER statement generates the scatter plot with error bars. */                                                                 
 /* The SERIES statement draws the line to connect the means.         */                                                                 
 proc sgplot data=reshape noautolegend; 
-   scatter x=time y=mean / yerrorlower=lower                                                                                            
+	&where;
+   	scatter x=time y=mean / yerrorlower=lower                                                                                            
                            yerrorupper=upper                                                                                            
                            markerattrs=(symbol=CircleFilled) group=product name="scat";                                                                
    	series x=time y=mean / lineattrs=(pattern=1 thickness=1) group=product;

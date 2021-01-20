@@ -32,11 +32,25 @@ Chargement du pilote
 
 %chargement_pilote();
 
+
 **************************************************************
 Chargement des macro-variables crées par la macro TABLE()
 ;
 
 %environnement(f=env.FTABLE_SAS, table=env.ETABLE_SAS);
+
+
+**************************************************************
+Paramètres des graphiques
+;
+
+ods graphics on / 
+      width=4in
+      imagefmt=jpeg
+      imagemap=on
+      imagename="MyBoxplot"
+      border=off
+;
 
 
 **************************************************************
@@ -137,8 +151,8 @@ title;
 				labX=Time (day),
 				labY=%str(&&paraf&i (*ESC*){unicode '000a'x}(mean ± 2*SEM)),
 				labGp=Product,
-				title=	%str(The figure below shows the evolution of the average value for the %lowcase(&&paraf&i) (± 2*SEM) over time, by zone.),
-				ft=timef.
+				ft=timef.,
+				where=%str(where time < 1000 and product < 1000)
 			);
 	
 
