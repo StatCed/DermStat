@@ -14,10 +14,11 @@ options mstored sasmstore=macro;
 	listeFormatsProduit = ,	          /*optionnel*/				
 	listeTemps = ,	                  /*optionnel*/							
 	listeTempsNum = ,	              /*optionnel*/					
-	TypeEtude	=  Intra              /*Intra ou Para*/,
+	TypeEtude	=  Intra,              /*Intra ou Para*/
 	delta= Oui 	,                     /*Oui/Non*/
 	libFormat = ,
-	tableVar =  
+	tableVar =  ,
+	debug= N,						  /*Oui/Non*/
 ) / STORE SOURCE;
 ; 
 
@@ -678,6 +679,7 @@ data &tableSortie;
 	NO=_n_;  /*Numero de l'observation*/ 
 run;
 
+
 *================================================================
 Propriété des varaibles
 =================================================================;
@@ -686,9 +688,24 @@ proc contents data=&tableSortie;
 ods select variables;
 run;
 
+
+*-----------------------------------------
+Controle correspondance entre les formats 
+des parametres et les variables
+------------------------------------------;
+
+title 'Controle correspondance entre les formats des parametres et les variables';
+proc sql;
+	select distinct parameterN format 8.0, parameterN, parameter
+	from work.cq_formats_parametres;
+quit;
+title;
+
+
 proc format library = &libFormat fmtlib;
 select parameterf productf @productf timef @timef prodf;
 run;
+
 
 *COMMANDES POUR GERER LES MACRO ET LES FORMAT STOCKES;
 /*
@@ -740,21 +757,25 @@ data dermscan.Listes_des_etudes;
 	set dermscan.Listes_des_etudes T_tp;
 run;
 
+
+
+*Mode DEBUG;
+%if %index(%upcase(&debug),N) %then %do;
 *Nettoyage de la bibliothèque WORK;
-/*
-proc datasets lib=work nolist; 
-  delete 
-CQ_FORMATS_PARAMETRES	
-_PARA	
-_PARA_ET_TPS	
-_POSITION	
-_PROD	
-_PRODSAVAIL	
-_TIME
-tp
-T_tp	
-; 
-quit; 
-*/
+	proc datasets lib=work nolist; 
+	  delete 
+	CQ_FORMATS_PARAMETRES	
+	_PARA	
+	_PARA_ET_TPS	
+	_POSITION	
+	_PROD	
+	_PRODSAVAIL	
+	_TIME
+	tp
+	T_tp	
+	; 
+	quit; 
+%end;
+
 
 %mend table;  
