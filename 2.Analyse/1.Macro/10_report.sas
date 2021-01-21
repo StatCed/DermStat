@@ -4,7 +4,7 @@
 options mstored sasmstore=macro;
 
 
-%macro report(table=catego,row=parameter*time*value,col=product,disp=col1)
+%macro report(table=catego,row=parameter*time*value,col=product,disp=col1,where=,width=1)
 	/ STORE SOURCE ;
 
 *--------------------
@@ -47,47 +47,50 @@ ods rtf select none;
 
 *Création des instructions 	DEFINE;
 %let DEFINE_ROW=;
-%do i=1 %to &list_of_categpries_in_row;
+%do inc=1 %to &list_of_categpries_in_row;
 
-	%let r&i= %scan(&row,&i,' ');
-	%if %index(%upcase(&&r&i,_N)) %then %do;
-		%let r&i= %scan(&&r&i,1,_);
-		%let r&i= define &&r&i %str(/ " ") order=internal  group noprint %str(;);
+	%let r&inc= %scan(&row,&inc,' ');
+	%if %index(%upcase(&&r&inc,_N)) %then %do;
+		%let r&inc= %scan(&&r&inc,1,_);
+		%let r&inc= define &&r&inc %str(/ " ") order=internal  group noprint %str(;);
 	%end;
 	%else %do;
-		%let r&i= define &&r&i %str(/ " ") order=internal group left %str(;);
+		%let r&inc= define &&r&inc %str(/ " ") order=internal group left %str(;);
 	%end;
 
-	%let DEFINE_ROW=&DEFINE_ROW &&r&i;
+	%let DEFINE_ROW=&DEFINE_ROW &&r&inc;
 
 %end;
 
 
 %let DEFINE_ACROSS=;
-%do i=1 %to &list_of_categpries_in_col;
-	%let c&i= %scan(&col,&i,' ');
-		%if %index(%upcase(&&c&i),'_N') %then %do;
-			%let c&i= %scan(&&c&i,1,'_');
-			%let c&i= define &&c&i %str(/ " ") order=internal noprint /*group*/ across %str(;);
+%do inc=1 %to &list_of_categpries_in_col;
+	%let c&inc= %scan(&col,&inc,' ');
+		%if %index(%upcase(&&c&inc),'_N') %then %do;
+			%let c&inc= %scan(&&c&inc,1,'_');
+			%let c&inc= define &&c&inc %str(/ " ") order=internal noprint /*group*/ across %str(;);
 		%end;
 		%else %do;
-			%let c&i= define &&c&i %str(/ " ") order=internal right /*group*/ across %str(;);
+			%let c&inc= define &&c&inc %str(/ " ") order=internal right /*group*/ across %str(;);
 		%end;
-		%let DEFINE_ACROSS=&DEFINE_ACROSS &&c&i;
+		%let DEFINE_ACROSS=&DEFINE_ACROSS &&c&inc;
 %end;
 
 
 %let DEFINE_DISPLAY=;
-%do i=1 %to &list_of_categories_in_disp;
-	%let d&i= %scan(&disp,&i,*);
-	%let d&i= define &&d&i %str(/" " ) display right %str(;);
-	%let DEFINE_DISPLAY=&DEFINE_DISPLAY &&d&i;
+%do inc=1 %to &list_of_categories_in_disp;
+	%let d&inc= %scan(&disp,&inc,*);
+	%let d&inc= define &&d&inc %str(/" " ) display right %str(;);
+	%let DEFINE_DISPLAY=&DEFINE_DISPLAY &&d&inc;
 %end;
 
 ods rtf select all;
 
-proc report data=&table;
+proc report data=&table
 
+	style(column)= [cellwidth=&width in /*fontsize=&tail pt font_face=&pol*/];
+
+&where;
 &column;
 
 	&DEFINE_ROW 
