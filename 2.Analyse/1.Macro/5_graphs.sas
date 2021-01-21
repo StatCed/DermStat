@@ -4,7 +4,6 @@ options mstored sasmstore=macro;
 
 %macro evolution(
 	table=,
-	para=,
 	echX= /*Optionnel*/,
 	echY= /*Optionnel*/,
 	labX=Time in (day),
@@ -16,19 +15,11 @@ options mstored sasmstore=macro;
 	where= 
 ) /STORE SOURCE;
 
-/*
-ods graphics on / 
-      width=4in
-      imagefmt=jpeg
-      imagemap=on
-      imagename="MyBoxplot"
-      border=off
-;
-*/
 
 proc sort data=&table out=mean; 
-	where parameter=&para;  
+	&where; 
    	by product time; 
+run;
 
 proc means data=mean noprint ; 
    	by product time;                                                                                                                             
@@ -61,7 +52,6 @@ run;
  /* The SCATTER statement generates the scatter plot with error bars. */                                                                 
 /* The SERIES statement draws the line to connect the means.         */                                                                 
 proc sgplot data=reshape noautolegend; 
-	&where;
    	scatter x=time y=mean / yerrorlower=lower                                                                                            
                            yerrorupper=upper                                                                                            
                            markerattrs=(symbol=CircleFilled) group=product name="scat";                                                                
@@ -86,30 +76,26 @@ run;
 
 %mend;
 
-%macro distribution(table=,para=,echY=,labY=%str(&&paraf&i (*ESC*){unicode '000a'x}(raw data)), labX=, leg=Product) /STORE SOURCE ;
+
+%macro distribution(
+	table=,
+	echY=,
+	labY=%str(&&paraf&i (*ESC*){unicode '000a'x}(raw data)), 
+	labX=, 
+	leg=Product,
+	where=
+) /STORE SOURCE 
+;
 proc sgplot data=&table;
    vbox value / category=time group=product grouporder=ascending;
    xaxis label="&labX";
-   yaxis label="&labY" 
-		&echY;
+   yaxis label="&labY" &echY;
    keylegend / title="&leg" noborder;
+   &where;
 run; 
 %mend;
 
 
-%macro distribution2(table=,para=,echY=%str(values=(0 to 10 by 1))) /STORE SOURCE ;
-proc sgplot data=&table;
-   vbox value / category=time group=product grouporder=ascending;
-   xaxis label="Time (Day)";
-   yaxis label="&&paraf&i (*ESC*){unicode '000a'x}(change from baseline)"
-		&echY;
-   keylegend / title="Product" noborder;
-refline 0 /axis=y lineattrs=(color=red) 
-/*label="Treatment end" */
-
-/*labelattrs=(color=red)*/;
-run; 
-%mend;
 
 /*
 %include "D:\Statistiques\Data_SAS\2017\SINCLAIR\17E0646\2.Analyse\0.Driver.sas";

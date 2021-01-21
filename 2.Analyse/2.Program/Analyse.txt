@@ -132,28 +132,33 @@ ods rtf close;
 
 title1 f=calibri h=10 pt j=left "The figure below shows the distribution of %lowcase(&&paraf&i) for each time point by zone.";  
 
-			data box_plot;
-				set &table;
-				if time < 1000 and product < 1000 and parameter=&i;
-			run; 
+%distribution(
+	table=&table,
+	echY=,
+	labY=%str(&&paraf&i (*ESC*){unicode '000a'x}(raw data)), 
+	labX=, 
+	leg=Product,
+	where=%str(where time < 1000 and product < 1000 and parameter=&i)
+	);		
 
-			%distribution(table=box_plot,para=&i);
 title;
 
 %let f=%eval(&f+1);
 %title(title=Figure &f.. Change over time in &&paraf&i value, level=1);
 
-			%evolution(
-				table=&table,
-				para=&i,
-				echX=/*%str(values=(1 to 12 by 1) fitpolicy=rotate)*/,
-				echY=/*%str(values=(0 to 10 by 1))*/,
-				labX=Time (day),
-				labY=%str(&&paraf&i (*ESC*){unicode '000a'x}(mean ± 2*SEM)),
-				labGp=Product,
-				ft=timef.,
-				where=%str(where time < 1000 and product < 1000)
-			);
+%evolution(
+	table=&table,
+	echX= /*Optionnel*/,
+	echY= /*Optionnel*/,
+	labX=Time in (day),
+	labY=%str(&&paraf&i (*ESC*){unicode '000a'x}(mean ± 2*SEM)),
+	labGp=Product,
+	ft=timef.,
+	ref=,
+	err= stderr/*STDERR ou STDDEV*/,
+	where=%str(where time < 1000 and product < 1000 and parameter=&i)
+);
+
 	
 
 %title(title=&i..2. Inferential analysis, level=1);
