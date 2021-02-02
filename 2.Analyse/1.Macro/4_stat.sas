@@ -1,4 +1,4 @@
-
+ï»¿
 
 options mstored sasmstore=macro;
 
@@ -17,7 +17,8 @@ options mstored sasmstore=macro;
 	tail=8,
 	larg=0.8,
 	lang=ang,
-	leg=Y
+	leg=Y,
+	out=
 ) / STORE SOURCE ;
 
 
@@ -42,7 +43,7 @@ proc format;
 	value statf
 		1 	= 'N (miss)'
 		2 	= 'mean (SD)'
-		2.5 = 'Mean ± SEM'	
+		2.5 = 'Mean Â± SEM'	
 		3 	= 'SEM'
 		4 	= 'median'
 		4.5 = 'CV'
@@ -57,9 +58,9 @@ proc format;
 	value statf
 		1 	= 'N (VM)'
 		2 	= 'moy (ET)'
-		2.5 = 'Moy ± ESM'	
+		2.5 = 'Moy Â± ESM'	
 		3 	= 'ESM'
-		4 	= 'médiane'
+		4 	= 'mÃ©diane'
 		4.5 = 'CV'
 		5 	= 'Q1 ; Q3'
 		5.5 = 'EI'
@@ -84,7 +85,7 @@ run;
 
 *-----------------------------------------------------------------
 On supprime les sorties des
-procédures 
+procÃ©dures 
 ;
 ods rtf exclude all;
 
@@ -100,12 +101,12 @@ ods rtf exclude all;
 
 
 *----------------------------------------------------------------
-Analyse du paramètre sélectionné si numParametre a une valeur 
-		sinon analyse de tous les paramètres
+Analyse du paramÃ¨tre sÃ©lectionnÃ© si numParametre a une valeur 
+		sinon analyse de tous les paramÃ¨tres
 ;
 
 %if %length(&numParametre) ^= 0 %then %do;
-	%let __selection_parametres =%str(if parameter=&numParametre);
+	%let __selection_parametres =%str(if parameter in (&numParametre));
 %end;
 %else %do;
 	%let __selection_parametres =%str() ;
@@ -139,7 +140,7 @@ proc tabulate data=__&table order=unformatted;
 run; 
 
 *
-Table avec les valeurs au format numériques;
+Table avec les valeurs au format numÃ©riques;
 
 data Stat_num;
 	set __DESC;
@@ -148,7 +149,7 @@ run;
 
 %macro Pourcentage_Amelioration();
 		*
-		Calcul des pourcentages moyen d amélioration sur les moyennes observées;
+		Calcul des pourcentages moyen d amÃ©lioration sur les moyennes observÃ©es;
 		proc sort data=Stat_num out=pourcentage_amelioration;
 			by parameter product time;
 			where time < 1000 and product <1000;
@@ -200,8 +201,8 @@ data __DESC;
 	IC = '('||strip(put(value_LCLM,&format)) || ' ; '||strip(put(value_UCLM,&format))||')';
 	CV = strip(put(value_CV,8.1));
 	Qrange = strip(put(value_qrange,&format));
-	/*Format Moy ± SEM*/ 
-	M_ESM = strip(put(value_mean,&format))||' ± '||strip(put(value_stderr,&format));
+	/*Format Moy Â± SEM*/ 
+	M_ESM = strip(put(value_mean,&format))||' Â± '||strip(put(value_stderr,&format));
 
 run;
 
@@ -279,7 +280,7 @@ proc sql noprint;
 				end as bool,
 			%end;
 				case 
-					when b.testlab='t' and b.pvalue ne . then strip(put(b.pvalue,pvalue8.4)||'°')
+					when b.testlab='t' and b.pvalue ne . then strip(put(b.pvalue,pvalue8.4)||'Â°')
 					when b.testlab='S' and b.pvalue ne . then strip(put(b.pvalue,pvalue8.4)||'*')
 					else 'na'
 				end as pvalueC
@@ -313,7 +314,7 @@ proc print data=__pvalue;
 run;
 
 
-*--------Création de la variable numérique produit-------------------------------------;
+*--------CrÃ©ation de la variable numÃ©rique produit-------------------------------------;
 
 data __RESULT;
 
@@ -337,9 +338,9 @@ data __RESULT;
 run;
 
 
-*-----------Ajout de la variable pvalue numérique------------------------;
+*-----------Ajout de la variable pvalue numÃ©rique------------------------;
 
-*Liaison avec la table contenant les pvalue numérique;
+*Liaison avec la table contenant les pvalue numÃ©rique;
 proc sql;
 	create table __RESULT as 
 	select *
@@ -370,7 +371,7 @@ quit;
 		%let comp=%eval(&comp+1);
 
 *------------------------------------------------------------------------
-			test t pour échantillons indépendant
+			test t pour Ã©chantillons indÃ©pendant
 ;
 
 	proc sort data=__&table out=__&table; by parameter time product; 
@@ -465,13 +466,13 @@ quit;
 
 	proc sql;
 		create table __comp_para&comp as
-		select a.*, put(stderr,&format) as stderrC, b.normalite, strip(put(probt,pvalue8.4)||'µ') as ttest, strip(put(MannWhitney,pvalue8.4)||'§') as MW, 
+		select a.*, put(stderr,&format) as stderrC, b.normalite, strip(put(probt,pvalue8.4)||'Âµ') as ttest, strip(put(MannWhitney,pvalue8.4)||'Â§') as MW, 
 		case
 			when b.normalite=1 then calculated ttest
 			when b.normalite=0 then calculated MW
 		end as pvalueC,
 		strip(put(Mean, &format))||' ('||strip(put(stdDev, &format))||')' as meanSD,
-		strip(put(Mean, &format))||' ± '||strip(put(stderr, &format)) as meanSEM
+		strip(put(Mean, &format))||' Â± '||strip(put(stderr, &format)) as meanSEM
 		from __comp_para&comp as a, __norm_&comp as b
 		where (a.parameter = b.parameter) and (a.time=b.time);
 	quit;
@@ -489,7 +490,7 @@ quit;
 		product = %eval(1000 + 100*&produit1 + &produit2);
 	run;
 
-	data __Result;
+	data &out;
 		set __Result __comp_Para&comp;
 	run;
 
@@ -561,15 +562,15 @@ proc report data=__RESULT out=__REPORT_1
 		compute after _page_ /left style={font_face=arial fontsize=6pt color=blue /*bordertopcolor=#3F9EA9*/ bordertopwidth=1};
 
 			%if ( %index(%upcase(&plan),I) ) %then %do;
-				line '°paired t-test';
+				line 'Â°paired t-test';
 				line "*Wilcoxon signed rank test";
 			%end;
 
 			%else %if ( %index(%upcase(&plan),P) ) %then %do;
-				line '°paired t-test';
+				line 'Â°paired t-test';
 				line "*Wilcoxon signed rank test";
-				line 'µ unpaired t-test';
-				line "§ Mann-Whitney test";
+				line 'Âµ unpaired t-test';
+				line "Â§ Mann-Whitney test";
 			%end;
 
 		endcomp;
