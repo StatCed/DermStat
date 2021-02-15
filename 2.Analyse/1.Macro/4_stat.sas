@@ -10,7 +10,7 @@ options mstored sasmstore=macro;
 	sortieBrute=n,
 	tableauRapport=o,
 	Plan=,
-	wilcoxon=non,
+	test=,
 	tempsAvecComparaison=,
 	stat=,
 	pol=calibri,
@@ -23,6 +23,8 @@ options mstored sasmstore=macro;
 ) / STORE SOURCE ;
 
 
+
+%put ERROR: Attention paramètre test fixé sur &test;
 
 
 proc format;
@@ -262,7 +264,7 @@ proc sql noprint;
 			b.test,
 			/*calculated pvalueC as stat,*/
 
-			%if %upcase(&wilcoxon)=NON %then %do;
+			%if %length(&test)=0 %then %do;
 				case 
 					when a.pvalue > 0.01 and b.testlab='t' then 1 
 					when a.pvalue <= 0.01 and b.testlab='t' then 0 
@@ -272,12 +274,22 @@ proc sql noprint;
 				end as bool,
 			%end;
 
-			%if %upcase(&wilcoxon)=OUI %then %do;
+			%if %index(%upcase(&test),W) %then %do;
 				case 
 					when a.pvalue > 0.01 and b.testlab='t' then 0 
 					when a.pvalue <= 0.01 and b.testlab='t' then 0 
 					when a.pvalue > 0.01 and b.testlab='S' then 1 
 					when a.pvalue <= 0.01 and b.testlab='S' then 1 
+					else 0
+				end as bool,
+			%end;
+
+			%if %index(%upcase(&test),T) %then %do;
+				case 
+					when a.pvalue > 0.01 and b.testlab='t' then 1 
+					when a.pvalue <= 0.01 and b.testlab='t' then 1 
+					when a.pvalue > 0.01 and b.testlab='S' then 0 
+					when a.pvalue <= 0.01 and b.testlab='S' then 0 
 					else 0
 				end as bool,
 			%end;
@@ -344,7 +356,7 @@ run;
 
 *Liaison avec la table contenant les pvalue numérique;
 proc sql;
-	create table __RESULT as 
+	create table &out as 
 	select *
 	from __RESULT as a left join __PVALUE as b
 	on a.parameter=b.parameter and a.product=b.product and a.time=b.time
@@ -493,7 +505,7 @@ quit;
 	run;
 
 	data &out;
-		set __Result __comp_Para&comp;
+		set &out __comp_Para&comp;
 	run;
 
 
