@@ -8,7 +8,7 @@ options mstored sasmstore=macro;
 	tableEntree=  , 
 	tableSortie=, 
 	autresVariables=,                 /*optionnel*/
-    vartransposedeb=3,                			
+	listeParametres= ,				  /*optionnel - Définit l ordre des variables de la table de sortie*/	
 	listeFormatsParametre = ,    	  /*optionnel*/			
 	listeProduits = ,	              /*optionnel*/						
 	listeFormatsProduit = ,	          /*optionnel*/				
@@ -30,7 +30,7 @@ options mstored sasmstore=macro;
 %let product_pos=1;
 %let subject_pos=2;
 %let var_pivot_fin=2;
-%let var_transpose_deb=&vartransposedeb.;
+%let var_transpose_deb=%eval(3+%sysfunc(countw(&autresVariables)));
 
 *#######################################################
 
@@ -184,7 +184,11 @@ Objectif du macro assign:
 %put variablesDeClassement= &variablesDeClassement.;
 %let variablesTransposees= &__varTransposees;
 %put variablesTransposees= &variablesTransposees.;
-%let listeParametres = &__listeParaC ;
+
+%if %length(&listeParametres)=0 %then %do;
+	%let listeParametres = &__listeParaC;
+%end;
+
 %put listeParametres=&listeParametres.;
 
 %macro assign();
