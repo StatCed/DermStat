@@ -30,7 +30,11 @@ options mstored sasmstore=macro;
 %let product_pos=1;
 %let subject_pos=2;
 %let var_pivot_fin=2;
-%let var_transpose_deb=%eval(3+%sysfunc(countw(&autresVariables)));
+
+%if %length(&autresVariables)=0 %then %let var_transpose_deb=3; 
+%else %let var_transpose_deb=%eval(3+%sysfunc(countw(&autresVariables))); 
+
+
 
 *#######################################################
 
