@@ -10,17 +10,25 @@ ODS escapechar='^';
 
 %macro title(title=,level=);
 ods rtf text="^S={indent=3.5 fontsize=10 pt font_face=calibri font_weight=bold} {\tc\f3\fs0\cf8 &title}"; 
-title&level f=calibri h=10 pt bold j=left "&title";
+title&level f=calibri h=10 pt bold j=left "&title ^2n";
 %mend;
 
 %macro table(title=,level=);
-ods rtf text="^S={indent=3.5 fontsize=8 pt font_face=calibri font_weight=bold} {\tc\f3\fs0\cf8 &title}"; 
-title&level f=calibri h=10 pt bold j=center underlin=1 "&title";
+
+%let tab_num=%eval(&tab_num+1);
+
+ods rtf text="^S={indent=3.5 fontsize=8 pt font_face=calibri} {\tc\f3\fs0\cf8 Table &tab_num.. &title}"; 
+title&level f=calibri h=10 pt bold j=center underlin=1 "Table &tab_num.. &title";
+
 %mend;
 
 %macro figure(title=,level=);
-ods rtf text="^S={indent=3.5 fontsize=8 pt font_face=calibri} {\tc\f3\fs0\cf8 &title}"; 
-title&level f=calibri h=10 pt bold j=center underlin=1 "&title";
+
+%let fig_num=%eval(&fig_num+1);
+
+ods rtf text="^S={indent=3.5 fontsize=8 pt font_face=calibri} {\tc\f3\fs0\cf8 Figure &fig_num.. &title}"; 
+title&level f=calibri h=10 pt bold j=center underlin=1 "Figure &fig_num.. &title";
+
 %mend;
 
 
