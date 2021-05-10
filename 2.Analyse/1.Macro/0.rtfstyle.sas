@@ -8,28 +8,58 @@ ods noproctitle;
 
 ODS escapechar='^';
 
-%macro title(title=,level=);
-ods rtf text="^S={indent=3.5 fontsize=10 pt font_face=calibri font_weight=bold} {\tc\f3\fs0\cf8 &title}"; 
-title&level f=calibri h=10 pt bold j=left "&title ^2n";
+
+
+*------------------------------------------
+Macros pour automatiser la numérotation des
+- titres
+- tableaux
+- figures
+-------------------------------------------;
+
+%macro title1(title=);
+%let titre1_num=%eval(&titre1_num+1);
+ods rtf text=
+"^S={indent=3.5 fontsize=10 pt font_face=calibri font_weight=bold} 
+{\tc\f3\fs0\cf8 &titre1_num.. &title}"; 
+title1 f=calibri h=10 pt bold j=left "&titre1_num.. &title ^2n";
+%mend;
+
+%macro title2(title=);
+%let titre2_num=%eval(&titre2_num+1);
+ods rtf text=
+"^S={indent=3.5 fontsize=10 pt font_face=calibri font_weight=bold} 
+{\tc\f3\fs0\cf8 &titre1_num..&titre2_num.. &title}"; 
+title2 f=calibri h=10 pt bold j=left "&titre1_num..&titre2_num.. &title ^2n";
+%mend;
+
+%macro title3(title=);
+%let titre3_num=%eval(&titre3_num+1);
+ods rtf text=
+"^S={indent=3.5 fontsize=10 pt font_face=calibri font_weight=bold} 
+{\tc\f3\fs0\cf8 &titre1_num..&titre2_num..&titre3_num.. &title}"; 
+title3 f=calibri h=10 pt bold j=left "&titre1_num..&titre2_num..&titre3_num.. &title ^2n";
+%mend;
+
+%macro title4(title=);
+%let titre4_num=%eval(&titre4_num+1);
+ods rtf text="^S={indent=3.5 fontsize=10 pt font_face=calibri font_weight=bold} 
+{\tc\f3\fs0\cf8 &titre1_num..&titre2_num..&titre3_num..&titre4_num.. &title}"; 
+title&level f=calibri h=10 pt bold j=left "&titre1_num..&titre2_num..&titre3_num..&titre4_num.. &title ^2n";
 %mend;
 
 %macro table(title=,level=);
-
 %let tab_num=%eval(&tab_num+1);
-
-ods rtf text="^S={indent=3.5 fontsize=8 pt font_face=calibri} {\tc\f3\fs0\cf8 Table &tab_num.. &title}"; 
+ods rtf text="^S={indent=3.5 fontsize=8 pt font_face=calibri font_weight=bold} {\tc\f3\fs0\cf8 Table &tab_num.. &title}"; 
 title&level f=calibri h=10 pt bold j=center underlin=1 "Table &tab_num.. &title";
-
 %mend;
 
 %macro figure(title=,level=);
-
 %let fig_num=%eval(&fig_num+1);
-
 ods rtf text="^S={indent=3.5 fontsize=8 pt font_face=calibri} {\tc\f3\fs0\cf8 Figure &fig_num.. &title}"; 
 title&level f=calibri h=10 pt bold j=center underlin=1 "Figure &fig_num.. &title";
-
 %mend;
+
 
 
 ods graphics on / 
