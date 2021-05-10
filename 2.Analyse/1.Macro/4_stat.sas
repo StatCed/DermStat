@@ -18,16 +18,24 @@ options mstored sasmstore=macro;
 	larg=0.8,
 	lang=ang,
 	leg=Y,
-	out= ,
-	debug=Y
-) / STORE SOURCE ;
+	out=__result,
+	debug=Y,
+	libFormat=work
+	rtf=N
+) 
+/ STORE SOURCE DES="v21.05.10";
 
 
 
-%put ERROR: Attention paramètre test fixé sur &test;
+*--------------------------------------------------
+Avertissement la normalité n est plus vérifiée,
+le paramètre test est fixé sur STUDENT ou WILCOXON;
+%if %length(&test) ne 0 %then %do;
+	%put ERROR: Attention paramètre test fixé sur &test;
+%end;
 
 
-proc format;
+proc format library = &libFormat;
 	invalue statf
 		'N_VM' 		= 1
 		'M_EC' 		= 2
@@ -90,8 +98,9 @@ run;
 On supprime les sorties des
 procédures 
 ;
-
-ods rtf exclude all;
+%if %index(%upcase(&rtf),N) ne 0 %then %do;
+	ods rtf exclude all;
+%end;
 
 
 
@@ -235,8 +244,11 @@ run;
 
 proc sort data=__&table out=__&table; by parameter product time; run;
 
-%if %upcase(&sortieBrute) = N %then %do; ods rtf exclude all; %end;
-%else %do; ods rtf select all; %end;
+%if ( %index(%upcase(&sortieBrute),N) and %index(%upcase(&rtf),N) ne 0 ) %then %do;
+	ods rtf exclude all; %end;
+%else %if %index(%upcase(&rtf),N) ne 0 %then %do; 
+	ods rtf select all; %end;
+
 
 ods output testsfornormality=__NORM testsforlocation=__LOC;
 
@@ -563,8 +575,10 @@ run;
 
 proc sort data=&out out=&out; by parameter  product time statN; run;
 
-%if %upcase(&TableauRapport) = N %then %do; ods rtf exclude all; %end;
-%else %do;ods rtf select all; %end;
+%if ( %index(%upcase(&TableauRapport),N) and %index(%upcase(&rtf),N) ne 0 ) %then %do;
+	ods rtf exclude all; %end;
+%else %if %index(%upcase(&rtf),N) ne 0 %then %do; 
+	ods rtf select all; %end;
 
 
 proc format;
@@ -635,17 +649,9 @@ proc report data=&out /*out=__REPORT_1*/
 
 run;
 
-ods rtf select all;
-
-
-
-
-
-
-
-
-
-
+%if %index(%upcase(&rtf),N) ne 0 %then %do;
+	ods rtf select all;
+%end;
 
 
 title;
