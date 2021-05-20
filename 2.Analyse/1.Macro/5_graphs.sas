@@ -52,10 +52,11 @@ run;
  /* The SCATTER statement generates the scatter plot with error bars. */                                                                 
 /* The SERIES statement draws the line to connect the means.         */                                                                 
 proc sgplot data=reshape noautolegend; 
+	styleattrs datacontrastcolors=(red blue green brown);
    	scatter x=time y=mean / yerrorlower=lower                                                                                            
                            yerrorupper=upper                                                                                            
-                           markerattrs=(symbol=CircleFilled) group=product name="scat";                                                                
-   	series x=time y=mean / lineattrs=(pattern=1 thickness=1) group=product;
+                           markerattrs=(symbol=diamondfilled size=10) group=product name="scat";   /*mgu update 25/03/2021*/                                                             
+   	series x=time y=mean / lineattrs=(pattern=1 thickness=0.7) group=product; /*mgu update 25/03/2021*/
    	xaxis integer &echX label="&labX"
 /*fitpolicy=rotate*/
 ;
@@ -86,8 +87,16 @@ run;
 	where=
 ) /STORE SOURCE 
 ;
-proc sgplot data=&table;
-   vbox value / category=time group=product grouporder=ascending;
+
+proc sort data=&table out=distribution;
+	by product time;
+run;
+
+proc sgplot data=distribution;
+   styleattrs 
+		datacolors=(red blue green brown)
+		datacontrastcolors=(black);
+   vbox value / category=time group=product grouporder=ascending outlierattrs=(symbol=CircleFilled) meanattrs=(symbol=diamondfilled);/*mgu update 25/03/2021*/
    xaxis label="&labX";
    yaxis label="&labY" &echY;
    keylegend / title="&leg" noborder;
