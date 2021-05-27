@@ -52,13 +52,13 @@ ods graphics on /
       imagename="MyBoxplot"
       border=off
 ;
-
 **************************************************************
 Declaration des macro-variables
 ;
 
 %let DATASET=lib.DTABLE_SAS;
 %let RTF=ATABLE_SAS;
+
 
 
 **************************************************************
@@ -71,66 +71,115 @@ Suppression des comparaisons entre produits
 Suppression des compraison entre les temps post basales
 ;
 
-data DATASET2;
+data dataset;
 	drop type;
 	set &DATASET;
 	if type ne 'rel'; 
-	if product < 1000; 
+*	if product > 1000; 
 	if time < 2000;
 run;
 
-/*
-ods rtf file="&output.Exploration_&DATASET..rtf" notoc_data nogtitle bodytitle startpage=no;
-options mprint symbolgen mlogic; 
-%exploration (table=DATASET2,para=);
-ods rtf close;
-*/
-
-%macro boucle(table=DATASET2, deb=, fin=, dec=,f=0);
-
-%title(title=Homogeneity,level=1);
-
-			%Stat(table=&table,
-				numParametre= ,
-				format=8.&dec , 
-				sortieBrute= n,
-				TableauRapport= o,
-				Plan = &planExperimental,
-				stat =  1 2 3 4 6 7,
-				lang = ang,
-				tempsAvecComparaison=%str(time=1 and (product<1000 and statN = 7)=0),
-				leg=N
-			); 
-
-
-	%do i=&deb %to &fin;
-
-*Homogénéité : %str(time=1 and (product<1000 and statN = 7)=0);
-*Valeurs brutes : %str(time<1000 and product<1000 and statN ne 7);
-
-
-%title(title=&i. &&paraf&i,level=1);
-
-%title(title=&i..1 Descriptive statistics, level=2);
-
-			%Stat(table=&table,
-				numParametre=&i 	,
-				format=8.&dec, 
-				sortieBrute= n		,
-				TableauRapport= o	,
-				Plan = &planExperimental,
-				stat =  1 2 3 4 6 7,
-				lang = fr,
-				tempsAvecComparaison=%str(time<1000 and product<1000 and statN ne 7),
-				leg=N
-			); 
+*Exploration de la table;
+proc sql;
+	select distinct parameter format 8.0, parameter 
+	from dataset;
+	select distinct product format 8.0, product
+	from dataset;
+	select distinct time format 8.0, time 
+	from dataset;
+quit;
 
 
 
-%let f=%eval(&f+1);
-%title(title=Figure &f.. Box-plot of raw &&paraf&i value, level=1);
 
-title1 f=calibri h=10 pt j=left "The figure below shows the distribution of %lowcase(&&paraf&i) for each time point by zone.";  
+
+
+*########################################################
+#	PARTIE CALCUL					#	
+# - Stoquage des résultats dans une table permanente	#	 
+# - A ne lancer qu une fois				#
+#########################################################;
+
+
+*------------------------
+STATISTIQUES DECSRIPTIVE 
+TEST T / WILCOXON
+-------------------------;
+
+*
+%Stat(table=DATASET,
+	numParametre=1 2 3,
+	format=8.1, 
+	sortieBrute= n		,
+	TableauRapport= o	,
+	Plan = &planExperimental,
+	stat =  1 2 3 4 6 7,
+	lang = ang,
+	tempsAvecComparaison=%str(time>0),
+	leg=N,
+	debug=N,
+	out=lib.STAT
+); 
+
+
+
+*-------------------
+ MIXED LINEAR MODEL
+-------------------;
+
+*
+%Mixed(
+	table= DATASET,
+	class = parameter product subject time ,
+	model = %str( value= product time product*time / ddfm=kr outp=GLM_Residuals),
+	random = %str(repeated time /sub=subject(product) type=un) ,	
+	where = %str(where parameter in (1 2 3) and time < 1000),
+	format= 8.2, 
+	pol= calibri,
+	tail= 8	,
+	larg= 1,
+	lang= ANG,
+	contrast_Out = lib.contrast,
+	contrast = 
+);
+	
+
+
+
+*########################
+#     PARTIE RAPPORT	#
+#########################;
+
+
+%macro boucle(table=dataset, deb=, fin=, dec=, f=0, tab_Num=0, fig_num=0, titre1_Num=0, titre2_Num=0, titre3_Num=0, titre4_Num=0);
+
+%title1(title=HOMOGENEITY AT BASELINE);
+
+%report(table=lib.stat,row=parameter*statN,col=product*time,disp=col1, where=%str(where time = 1 and product > 1000 and statN in (1 2 7)));
+
+
+%title1(title=RESULTS);
+
+%title2(title=SCORE CLINIQUE);
+
+
+
+ods rtf startpage=now;
+
+%do i=&deb %to &fin;
+
+
+%title3(title=&&paraf&i);
+
+%table(title=Descriptive statistics of &&paraf&i value, level=4);
+
+%report(table=lib.stat,row=time*statN,col=parameter*product,disp=col1, where=%str(where time < 1000 and product < 1000 and parameter=&i and statN in ( 1 2 3 4 6)));
+
+ods rtf startpage=now;
+
+
+
+%figure(title=Box-plot of raw &&paraf&i value for each time point, level=1);
 
 %distribution(
 	table=&table,
@@ -138,92 +187,47 @@ title1 f=calibri h=10 pt j=left "The figure below shows the distribution of %low
 	labY=%str(&&paraf&i (*ESC*){unicode '000a'x}(raw data)), 
 	labX=, 
 	leg=Product,
-	where=%str(where time < 1000 and product < 1000 and parameter=&i)
-	);		
+	where=%str(where parameter=&i and time < 1000 and product < 1000)
+);
 
-title;
 
-%let f=%eval(&f+1);
-%title(title=Figure &f.. Change over time in &&paraf&i value, level=1);
+%figure(title=Change over time in &&paraf&i value, level=1);
 
 %evolution(
 	table=&table,
-	echX= /*Optionnel*/,
-	echY= /*Optionnel*/,
-	labX=Time in (day),
+	echX=,
+	echY=,
+	labX=Time (day),
 	labY=%str(&&paraf&i (*ESC*){unicode '000a'x}(mean ± 2*SEM)),
 	labGp=Product,
 	ft=timef.,
-	ref=,
-	err= stderr/*STDERR ou STDDEV*/,
-	where=%str(where time < 1000 and product < 1000 and parameter=&i)
+	where=%str(where parameter=&i and time < 1000 and product < 1000)
 );
-
-	
-
-%title(title=&i..2. Inferential analysis, level=1);
-
-			%Stat(table=&table,
-				numParametre=&i 	,
-				format=8.&dec, 
-				sortieBrute= n		,
-				TableauRapport= o	,
-				Plan = &planExperimental,
-				stat =  1 2 3 4 6 7,
-				lang = fr,
-				tempsAvecComparaison=%str(time>1000),
-				leg=Y
-			); 
-
-/*		
-%ANOVA(table= &table,
-	class = %str(parameter subject product time),
-	model = %str(value=product time product*time / ddfm=KR outp=resid_&&para&i ;),
-	random =%str(repeated  time product/sub=subject type=UN@cs),	
-	where = %str(where time<1000 and product <1000 and parameter=&i),
-	table_cont= comparaison,
-	log = log(value),
-	sqrt = sqrt(value), 
-	numParametre=&i, 
-	format=8.&dec, 
-	SortiesBrutes=non,
-	pol=calibri	,
-	tail=8	,
-	larg=1,
-	lang=ANG,
-	cont= 
-%str(
-lsmestimate	product*time	"&pf1 : &t2 - &t1"	-1 1 0	/cl;
-lsmestimate	product*time	"&pf1 : &t3 - &t1"	-1 0 1	/cl;
-
-lsmestimate	product*time	"&pf2 : &t2 - &t1"	0 0 0 	-1 1 0	/cl;
-lsmestimate	product*time	"&pf2 : &t3 - &t1"	0 0 0	-1 0 1	/cl;
-
-lsmestimate	product*time	"&pf1 vs &pf2 on (&t2 - &t1)"	  -1 1 0   1 -1 0	/cl;
-lsmestimate	product*time	"&pf1 vs &pf2 on (&t3 - &t1)"	  -1 0 1   1 0 -1 	/cl;
-)
-);
-*/
-
-*Enregistrement des moyennes ajustées pour vérification graphique;
-*data check&i;
-*	set contrast_&&para&i;
-*	parameter=&i;
-*	type='adjusted';
-*run;
-
 
 ods rtf startpage=now;
+
+%table(title=Change from baseline in &&paraf&i value, level=1);	
+
+%report(table=lib.STAT,row=time*statN,col=parameter*product,disp=col1,
+	where=%str(where time > 1000 and product < 1000 and parameter=&i and statN in ( 1 2 3 4 6 7)),
+	width=1
+);
+
+%table(title=Pairwise comparison of products in &&paraf&i value, level=1);	
+
+%report(table=lib.STAT,row=time*statN,col=parameter*product,disp=col1,
+	where=%str(where time > 1000 and product > 1000 and parameter=&i and statN in ( 1 2 3 4 6 7)),
+	width=1
+);
 
 	%end;
 
 %mend;
 
 
-
 ods rtf file="&output.&rtf..rtf" notoc_data nogtitle contents=yes bodytitle startpage=no style=sty.s4;
 
-%boucle(deb=1, fin=1, dec=2);
+%boucle(table=dataset, deb=1, fin=1, dec=, f=0, tab_Num=0, fig_Num=0, titre1_Num=0, titre2_Num=0, titre3_Num=0, titre4_Num=0);
 
 ods rtf close;
 
