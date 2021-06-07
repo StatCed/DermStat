@@ -165,3 +165,40 @@ title;
 
 %&ns;
 
+
+
+*#################################################
+#                                                #
+# Exemple d utilisation de la procédure SGPLANEL #
+#                                                #   
+##################################################;
+
+proc sgpanel data = DATASET2  ;
+	panelby  product /  COLUMNS=2  ; 
+	vbox  value / group= zone category = time dataskin=pressed MEANATTRS=(color=black size=4 symbol=circlefilled);
+	where time < 1000;
+	colaxis label= "Time" ;
+	rowaxis label= "Erythema value" ;
+run;
+
+ods output summary=summary;
+proc means data=DATASET2  maxdec=1 mean lclm uclm;
+	var value;
+	class parameter product zone time;
+run;
+
+proc sgpanel data=summary ; 
+	panelby  product/  COLUMNS=2 ROWS=1; 
+	series y=value_mean x=time / 	
+		markerattrs=(symbol=CircleFilled) 
+		group=zone;
+   	scatter y=value_mean x=time / 
+		yerrorlower=value_lclm                                                                                           
+        yerrorupper=value_uclm                                                                                            
+       	markerattrs=(symbol=CircleFilled ) group=zone ;
+	colaxis label= "Time"  integer  fitpolicy=rotate ; 
+	rowaxis label= "Mean (with 95% CI)" ;
+  	refline 0 /axis=y lineattrs=(color=crimson pattern=2); 
+*	keylegend / title="Technician" noborder;
+	where time < 1000;
+run;
