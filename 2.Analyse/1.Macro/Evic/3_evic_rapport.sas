@@ -1,5 +1,5 @@
  
-*****************************************************************************************
+/*****************************************************************************************
 
 NOM : %evic_rapport()
 
@@ -10,46 +10,107 @@ OBJET : analyse statistique des données issue de EVIC
 REQUIERE : 	prend en entrée une table excel de données avec les variables suivantes	->
 			PARAMETER/PRODUCT/TIME/SUBJECT/VALUE (issue de la macro %table()) 
 
-MACRO DEPENDANCE : %stat_evic()
+MACRO DEPENDANCE : 	%evic_stat()
+					%evic_analyse() -> à éxécuter avant
+						
+EXEMPLE D APPEL :	%evic_analyse(table=DATASET, dec=2,f=0, out=ANALYSE, non_parametric=oui, lang=ang);
+					%evic_rapport(raw_data=DATASET, table_entree=ANALYSE);
 
 ENTREE : table SAS 
 
-SORTIE : table SAS
+SORTIE : rapport RTF
 
 DATE : 	13/11/2020
 
-DERNIERE MODIFICATION : 13/11/2020
+DERNIERE MODIFICATION : 07/09/2021
 
 AUTEUR : Cédric Jung - cju@dermscan.com
 
-****************************************************************************************;
+****************************************************************************************/;
 
+*libname macro "D:\StructureEtude\0.XXEXXXX_Draft\2.Analyse\1.Macro";
+options mstored sasmstore=macro;
 
-
-%macro evic_rapport(table_entree=,rtf_sortie=&rtf_sortie) /store source;
-
-ods rtf file="&rtf_sortie" notoc_data nogtitle contents=yes bodytitle startpage=no style=sty.s4;
-
-proc sql;	
-	select distinct statN format 8.2, statN
-	from &table_entree;
-quit; 
-
-ods rtf style=sty.s4;
+%macro evic_rapport(raw_data=,table_entree=,rtf_sortie=&rtf_sortie) /store source;
 
 title 'Analyse descripitive';
-proc report data=&table_entree;	
-	where statN in (11 12 13 14 15);
-	column parameter product time statN, (col1 n);
+proc report data=&table_entree
+	style(column)= [just=center cellwidth=0.6in  fontsize=8 pt font_face=tahoma];	
+	where product < 1000 and statN in (11 12 13 13.5 14 15);
+	column ("Parameter" parameter) ("Product" product) ("Time" time) statN, (col1 n);
 	
-	define parameter 	/	group order=internal ;
-	define product 	/	group order=internal ;
-	define time 	/	group order=internal ;
-	define statN	/	across order=internal ;
-	define col1 / ' ' display;
-	define n / noprint;
+	define parameter 	/ ' '	group order=internal style(column)=[just=left cellwidth=1in];
+	define product 		/ ' '	group order=internal style(column)=[just=left cellwidth=1in];
+	define time 		/ ' '	group order=internal style(column)=[just=left cellwidth=1in];
+	define statN		/ ' '	across order=internal f=statf.;
+	define col1 		/ ' ' 	display;
+	define n 			/ 		noprint;
 run;
 
+title 'Effet temps global';
+proc report data=&table_entree
+	style(column)= [just=center cellwidth=1in  fontsize=8 pt font_face=tahoma];	
+	where product < 1000 and (time=1 and statN=1)=1 or (test='Friedman');
+	column statN (Parameter), (Product), (time), (col1 n);
+	define statN		/ ' '	order group order=internal f=statf.;
+	define parameter 	/ ' '	across style(column)=[just=left cellwidth=1in];
+	define product 		/ ' '	across order=internal style(column)=[just=left cellwidth=1in];
+	define time 		/ ' '	across order=internal style(column)=[just=left cellwidth=1in] f=GlobalTimef.;
+	define col1 		/ ' ' 	display;
+	define n 			/ 		noprint;
+run;
+
+%do par=1 %to &nombreParametres;
+title "Variation par rapport à la valeur basale pour chaque produit - &&paraf&i";
+proc report data=&table_entree
+	style(column)= [just=center cellwidth=1in  fontsize=8 pt font_face=tahoma];		
+	where product<1000 and time >1000 and statN in (-8 6.75 7 8) and parameter=&par;
+	column  statN parameter, product, time, (col1 n);
+	define statN 		/ ' ' 	group order=internal f=statf.;
+	define parameter 	/' ' 	group across order=internal;
+	define time 		/ ' '	group across order=internal;
+	define product 		/ ' ' 	group across order=internal;
+	define col1  		/ ' ' 	display ;
+	define n			/ noprint;
+run;
+%end;
+
+title 'Analyse comparative entre les produits';
+proc report data=&table_entree
+	style(column)= [just=center cellwidth=1in  fontsize=8 pt font_face=tahoma];		
+	where product>1000 and (time=1 or time >1000) and statN in (-10 -9 -8 6.75 7 8);
+	column  statN product, parameter, time, (col1 n);
+	define statN 	/ ' ' group order=internal f=statf.;
+	define parameter /' ' group across order=internal;
+	define time 	/ ' '	group across order=internal;
+	define product 	/ ' ' group across order=internal;
+	define col1  	/ ' ' display center ;
+	define n		/ noprint;
+run;
+
+ods startpage=now;
+title 'ANNEXE';
+title2 'Global time effect - Friedman test';
+
+proc freq data=&raw_data;
+	where product < 1000 and time <1000;
+	tables subject*time*value / CMH2 SCORES=RANK NOPRINT;
+	by parameter product;
+	format time GlobalTimef.;
+	label value ='Score';
+run;
+
+ods startpage=now;
+title1 'Pairwise comparison - Wilcoxon signed rank test';
+proc univariate data=&raw_data normal;
+	where time > 1;
+	ods select testsforlocation /*testsfornormality*/;
+	var value;
+	class parameter time;
+	label value ='Score';
+run;
+title;
+/*
 title 'Analyse comparative';
 
 data test;
@@ -95,8 +156,8 @@ proc report data=&table_entree;
 	define statN 		/ ' '	group order=internal left;
 	define responder 	/ ' '	across order=internal ;
 	define time 		/ ' '	across order=internal ;
-	define col1 		/ ' ' display center;
-	define n 			/ noprint;
+	define col1 		/ ' ' 	display center;
+	define n 			/ 		noprint;
 
 run;
 
@@ -121,28 +182,8 @@ run;
 
 ods  escapechar='^';
 
-ods rtf style=sty.s4;
-title 'Analyse comparative entre les produits';
-proc report data=tab
-	style(column)= [cellwidth=1.2in /*fontsize=10pt font_face=arial*/];
-
-*	where product>1000 and (time=1 or time >1000) and statN in (-10 -9 -8 6.75 7 8);
-
-	column  statN product, parameter, time, (col1 n);
-	define statN 	/ ' ' group order=internal;
-	define parameter /' ' group across order=internal;
-	define time 	/ ' '	group across order=internal;
-	define product 	/ ' ' group across order=internal;
-	define col1  	/ ' ' display center ;
-	define n		/ noprint;
-run;
-footnote1 'Pour le parametre XXXX: ^2n on observe une diminution';
-ods rtf close;
-
-
-%no_section(&rtf_sortie);
-
-
+*footnote1 'Pour le parametre XXXX: ^2n on observe une diminution';*/
+title;
 %mend;
 
 
