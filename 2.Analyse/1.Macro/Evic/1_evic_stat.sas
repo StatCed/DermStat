@@ -21,6 +21,7 @@ AUTEUR : Cédric Jung - cju@dermscan.com
 
 ************************************************************************************;
 
+*libname macro "D:\StructureEtude\0.XXEXXXX_Draft\2.Analyse\1.Macro";
 options mstored sasmstore=macro;
 
 %macro evic_stat
@@ -30,17 +31,16 @@ options mstored sasmstore=macro;
 	format=8.2,
 	sortieBrute=N,
 	tableauRapport=O,
-	Plan=,
+	Plan=&planExperimental,
 	wilcoxon=non,
-	tempsAvecComparaison=,
-	stat=,
+	tempsAvecComparaison=%srt(where time>=0),
+	stat=%str(1 2 3 4 5 6 7),
 	pol=calibri,
 	tail=8,
 	larg=0.8,
 	lang=ang,
 	leg=Y
 ) / STORE SOURCE ;
-
 
 
 proc format;
