@@ -25,10 +25,11 @@ AUTEUR : Cédric Jung - cju@dermscan.com
 ****************************************************************************************;
 
 
+*libname macro "D:\StructureEtude\0.XXEXXXX_Draft\2.Analyse\1.Macro";
 
 options mstored sasmstore=macro;
 
-%macro evic_analyse(table=DATASET2, dec=,f=0, out=) / STORE SOURCE ;
+%macro evic_analyse(table=DATASET2, dec=,f=0, out=, lang=ang, non_parametric=/*oui/non*/) / STORE SOURCE ;
 
 *~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 1.
@@ -36,49 +37,210 @@ options mstored sasmstore=macro;
 	-	VARIATION PAR RAPPORT A LA VALEUR BASALE -> STUDENT / WILCOXON
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~;
-%Stat(table=&table,
+%evic_Stat(
+	table=&table,
 	numParametre= ,
 	format=8.&dec , 
 	sortieBrute= n,
 	TableauRapport= o,
 	Plan = &planExperimental,
+	wilcoxon=&non_parametric,
 	stat =  1 2 3 4 6 7,
 	lang = fr,
 	tempsAvecComparaison=%str(time>=0 ),
 	leg=N
 ); 
 
+*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2. Format Français/Anglais
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~;
+proc format;
+	invalue statf
+		'N_VM' 		= 1
+		'M_EC' 		= 2
+		'M_ESM'		= 2.5
+		'ESM'  		= 3
+		'Med'  		= 4
+		'CV' 		= 4.5
+		'Q1_Q3'   	= 5
+		'Qrange'	= 5.5
+		'Range'		= 6
+		'IC'		= 6.5 
+		'pvalueC'	= 7
+		;
+%if %upcase(&lang) = ANG %then %do;
+	value statf
+		-10		= 'Time'
+		-9		= 'Parameter'
+		-8		= 'Number of subject'
+		-7		= 'Product'
+
+        1     	= 'N (miss)'
+        2     	= 'mean (SD)'
+        2.5 	= 'Mean ± SEM'    
+        3     	= 'SEM'
+        4     	= 'median'
+        4.5 	= 'CV'
+        5     	= 'Q1 ; Q3'
+        5.5 	= 'IQR'
+        6     	= 'min ; max'
+        6.5 	= '95% CI'
+		6.75	= 'Statistical test'
+        7     	= 'p-value'
+		8		= 'Statistical interpretation     (Significant if p<0,050)'
+		9     	= 'Effect in %'
+
+		11 		= 'Number of subject'
+		12		= 'Mean'
+		13 		= 'Standard deviation'
+		13.5	= 'Median'
+		14		= 'Maximum'
+		15		= 'Minimum'
+
+		21  	= 'Statistical test'
+        22    	= 'p-value'
+		23    	= 'Interpretation'
+   
+        31  	= 'Number and %'
+        32  	= 'Improvement score'
+;
+ 	value responderf
+		1	=	'Volunteer responders'
+		2	=	'Panel total'
+;
+	value significativityf
+		1	=	'Yes'
+		0	=	'No'
+;
+	value conclusionf
+		0 = 'NA'
+		1 = 'Significant difference'
+		2 = 'No difference'
+;
+%end;
+
+%else %if %upcase(&lang) = FR %then %do;
+	value statf
+		-10		= 'Temps'
+		-9		= 'Paramètre'
+		-8		= 'Nombre de sujets'
+		-7		= 'Produit'
+
+        1     	= 'N(VM)'
+        2     	= 'Moyenne(ET)'
+        2.5 	= 'Moyenne ± ESM'    
+        3     	= 'ESM'
+        4     	= 'Médiane'
+        4.5 	= 'CV'
+        5     	= 'Q1 ; Q3'
+        5.5 	= 'IQR'
+        6     	= 'min ; max'
+        6.5 	= '95% CI'
+		6.75	= 'Test Statistique'
+        7     	= 'p-value'
+		8		= 'Interprétation statistique (Significatif si p<0,050)'
+		9     	= 'Effet en %'
+
+		11 		= 'Nombre de sujets'
+		12		= 'Moyenne'
+		13 		= 'Ecart type'
+		13.5	= 'Médiane'
+		14		= 'Maximum'
+		15		= 'Minimum'
+
+		21  	= 'Statistical test'
+        22    	= 'p-value'
+		23    	= 'Interpretation'
+   
+        31  	= 'Nombre et %'
+        32  	= 'Score d''amélioration'
+;
+ value responderf
+		1	=	'Volontaires répondeurs'
+		2	=	'Panel total'
+;
+;
+value significativityf
+		1	=	'Oui'
+		0	=	'Non'
+;
+	value conclusionf
+		0 = 'NA'
+		1 = 'Différence significative'
+		2 = 'Pas de différence'
+;
+%end;
+
+value $testf
+		'Signed Rank'	=	'Wilcoxon'
+		"Student's t"	=	'Student'
+;
+
+%let GlobalTime = ;
+%do tps=1 %to &NombreTemps;
+	%let GlobalTime =&GlobalTime &&t&tps.,;
+%end;
+value GlobalTimef
+	1 = "&GlobalTime"
+;
+run;
+
+
+*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2.
+	-	CHANGE FROM BASELINE TEST T/WILCOXON
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~;
+
 proc sort data=STAT_NUM out=STAT_NUM_RAW;
-		by parameter product time;
+	by parameter product time;
 run;
 
 proc transpose data=STAT_NUM_RAW out=STAT_NUM_RAW (rename=(col1=value));
-	var value_N value_Mean value_Std value_Min value_Max;
+	var value_N value_Mean value_Std value_Median value_Min value_Max;
 	by parameter product time;
 run; 
 
 data STAT_NUM_RAW;
 	set STAT_NUM_RAW;
+	length col1 $ 50;
 	*Variables STATn et PANEL pour sniff test;
-	if _name_='value_N' 	then do; statN=11; /*statN2 = 1; panel=2;*/ end;
-	if _name_='value_Mean' 	then do; statN=12; /*statN2 = 2; panel=2;*/ end;	
-	if _name_='value_Std' 	then statN=13;
-	if _name_='value_Max' 	then statN=14;
-	if _name_='value_Min' 	then statN=15;
+	if _name_='value_N' 		then do; statN=11; /*statN2 = 1; panel=2;*/ end;
+	if _name_='value_Mean' 		then do; statN=12; /*statN2 = 2; panel=2;*/ end;	
+	if _name_='value_Std' 		then statN=13;
+	if _name_='value_Median' 	then statN=13.5;
+	if _name_='value_Max' 		then statN=14;
+	if _name_='value_Min' 		then statN=15;
 	if statN=11 		then col1=strip(put(value,8.0));
 	else if statN>11 	then col1=strip(put(value,8.2));
 run;
+
+/*
+data __pvalue_1;
+	length conclusion $ 50 test2 $ 50;
+	set __pvalue;
+*	if time > 1000;
+	if missing(pvalue)				then conclusion = put(0,conclusionf.);
+	else if pvalue < 0.05 			then conclusion = put(1,conclusionf.);
+	else if pvalue > 0.05 			then conclusion = put(2,conclusionf.);
+	if index(test,'Signed')			then test2='Wilcoxon';
+	else if index(test,'Student') 	then test2='Student';
+	else test2='NA';
+	normality_test = 0;
+run;
+*/
 
 data __pvalue_2;
 	length conclusion $ 50 test2 $ 50;
 	set __pvalue;
 *	if time > 1000;
-	if missing(pvalue)				then conclusion = 'NA';
-	else if pvalue < 0.05 			then conclusion = 'Différence signficative';
-	else if pvalue > 0.05 			then conclusion = 'Différence non-significative';
+	if missing(pvalue)				then conclusion = put(0,conclusionf.);
+	else if pvalue < 0.05 			then conclusion = put(1,conclusionf.);
+	else if pvalue > 0.05 			then conclusion = put(2,conclusionf.);
 	if index(test,'Signed')			then test2='Wilcoxon';
 	else if index(test,'Student') 	then test2='Student';
 	else test2='NA';
+	normality_test = 1;
 run;
 
 proc transpose data=__pvalue_2 out=__pvalue_3;
@@ -131,8 +293,8 @@ run;
 		);
 
 		*Stockage test de Shapiro-Wilk dans macro variable;
-		data TestsForNormality_&&para&i;
-			set TestsForNormality_&&para&i;
+		data Normality_Residuals;
+			set Normality_Residuals;
 			if testLab='W' then call symput ('Shapiro_Wilk',pvalue);
 		run;
 
@@ -176,124 +338,6 @@ data CMH;
 run;
 
 
-%let lang=ANG;
-
-proc format;
-	invalue statf
-		'N_VM' 		= 1
-		'M_EC' 		= 2
-		'M_ESM'		= 2.5
-		'ESM'  		= 3
-		'Med'  		= 4
-		'CV' 		= 4.5
-		'Q1_Q3'   	= 5
-		'Qrange'	= 5.5
-		'Range'		= 6
-		'IC'		= 6.5 
-		'pvalueC'	= 7
-		;
-
-%if %upcase(&lang) = ANG %then %do;
-  value statf
-		-10		= 'Time'
-		-9		= 'Parameter'
-		-8		= 'Number of subject'
-		-7		= 'Product'
-
-        1     	= 'N (miss)'
-        2     	= 'mean (SD)'
-        2.5 	= 'Mean ± SEM'    
-        3     	= 'SEM'
-        4     	= 'median'
-        4.5 	= 'CV'
-        5     	= 'Q1 ; Q3'
-        5.5 	= 'IQR'
-        6     	= 'min ; max'
-        6.5 	= '95% CI'
-		6.75	= 'Statistical test'
-        7     	= 'p-value'
-		8		= 'Statistical interpretation(Significant if p<0,050)'
-		9     	= 'Effect in %'
-
-		11 		= 'Number of subject'
-		12		= 'Mean'
-		13 		= 'Standard dev'
-		14		= 'Maximum'
-		15		= 'Minimum'
-
-		21  	= 'Statistical test'
-        22    	= 'p-value'
-		23    	= 'Interpretation'
-   
-        31  	= 'Number and %'
-        32  	= 'Improvement score'
-;
- value responderf
-		1	=	'Volunteer responders'
-		2	=	'Panel total'
-;
-%end;
-
-%if %upcase(&lang) = FR %then %do;
-	value statf
-		-10		= 'Temps'
-		-9		= 'Paramètre'
-		-8		= 'Nombre de sujets'
-		-7		= 'Produit'
-
-        1     	= 'N(VM)'
-        2     	= 'Moyenne(ET)'
-        2.5 	= 'Moyenne ± ESM'    
-        3     	= 'ESM'
-        4     	= 'médiane'
-        4.5 	= 'CV'
-        5     	= 'Q1 ; Q3'
-        5.5 	= 'IQR'
-        6     	= 'min ; max'
-        6.5 	= '95% CI'
-		6.75	= 'Test Statistique'
-        7     	= 'p-value'
-		8		= 'Interprétation statistique (Significatif si p<0,050)'
-		9     	= 'Effet en %'
-
-		11 		= 'Nombre de sujets'
-		12		= 'Moyenne'
-		13 		= 'Ecart type'
-		14		= 'Maximum'
-		15		= 'Minimum'
-
-		21  	= 'Statistical test'
-        22    	= 'p-value'
-		23    	= 'Interpretation'
-   
-        31  	= 'Nombre et %'
-        32  	= 'Score d''amélioration'
-;
- value responderf
-		1	=	'Volontaires répondeurs'
-		2	=	'Panel total'
-;
-%end;
-
-%if %upcase(&lang) = ANG %then %do;
-value significativityf
-		1	=	'Yes'
-		0	=	'No'
-;
-%end;	
-
-%if %upcase(&lang) = FR %then %do;
-value significativityf
-		1	=	'Oui'
-		0	=	'Non'
-;
-%end;
-value $testf
-		'Signed Rank'	=	'Wilcoxon'
-		"Student's t"	=	'Student'
-;
-run;
-
 *Stockage des resultats du test ANOVA et Friedman dans la table Overall_Time_Effect2;
 proc sql;
 	create table Overall_Time_Effect2 as
@@ -305,7 +349,9 @@ quit;
 data Overall_Time_Effect3;
 	length conclusion $ 50;
 	set Overall_Time_Effect2;
-	if Shapiro_Wilk < 0.01 then do;
+
+	/*Sélection du test en fonction de la normalité*/
+	/*if Shapiro_Wilk < 0.01 then do;
 		test='Friedman';
 		pvalueC=strip(put(Friedman,pvalue8.4));
 		pvalue = Friedman;
@@ -314,16 +360,34 @@ data Overall_Time_Effect3;
 		test='ANOVA';
 		pvalueC=strip(put(ANOVA,pvalue8.4));
 		pvalue = ANOVA;
-	end;
+	end;*/
 
-	if missing(pvalue) 		then conclusion='NA';
-	else if pvalue < 0.05	then conclusion='Différence significative';
-	else if pvalue > 0.05 	then conclusion='Différence non-significative';
+	test='Friedman';
+	pvalueC=strip(put(Friedman,pvalue8.4));
+	pvalue = Friedman;
+	if missing(pvalue) 		then conclusion=put(0,conclusionf.);
+	else if pvalue < 0.05	then conclusion=put(1,conclusionf.);
+	else if pvalue > 0.05 	then conclusion=put(2,conclusionf.);
+	output;
+
+	test='ANOVA';
+	pvalueC=strip(put(ANOVA,pvalue8.4));
+	pvalue = ANOVA;
+	if missing(pvalue) 		then conclusion=put(0,conclusionf.);
+	else if pvalue < 0.05	then conclusion=put(1,conclusionf.);
+	else if pvalue > 0.05 	then conclusion=put(2,conclusionf.);
+	output;
+
+run;
+
+proc sort data=Overall_Time_Effect3 
+	out=Overall_Time_Effect3;
+	by parameter product test pvalue ;
 run;
 
 proc transpose data=Overall_Time_Effect3 
 	out=Overall_Time_Effect4 name=stat;
-	by parameter product pvalue;
+	by parameter product test pvalue ;
 	var test pvalueC conclusion;
 run;
 
@@ -332,6 +396,7 @@ data Overall_Time_Effect5;
 	if stat = 'test' 			then statN = 21;
 	else if stat = 'pvalueC' 	then statN = 22;
 	else if index(stat,'conc')	then statN = 23;
+	time=1;
 run;
 
 
@@ -394,46 +459,33 @@ proc transpose data=STAT_NUM5
 run;	
 
 data STAT_NUM7 ;
-	drop _name_ drop timeC productC value ;
+*	drop timeC productC value ;
 	set STAT_NUM6;
+	length col1 $ 50;
 	statN=9;
 	product=input(productC,productf.);
 	time=input(timeC,timef.);
 	if time > 1000;
-
 	%if %eval (&nombreproduits>1) %then %do;
 		if product > 1000;
 	%end;
-
-	if missing(value) then do; 
-		col1='NA'; output stat_num7;
-
-	end;
-	else do;
-		col1=strip(put(value/100,percentN8.1));
-	end;
+	if not missing(value) then col1=strip(put(value,percentN8.1));
+	else col1='NA'; 
 run;
 
 data STAT_NUM8 ;
-	drop _name_ drop timeC productC value ;
 	set STAT_NUM6;
 	statN=9;
+	length Percentage $ 50;
 	product=input(productC,productf.);
 	time=input(timeC,timef.);
 	if time > 1000;
-	
 	%if %eval (&nombreproduits>1) %then %do;
 		if product > 1000;
 	%end;
-
-	if missing(value) then do; 
-		Percentage='NA'; output stat_num8;
-	end;
-	else do;
-		Percentage=strip(put(value/100,percentN8.1));
-	end;
+	if missing(value) then Percentage='NA'; 
+	else Percentage=strip(put(value,percentN8.1));
 run;
-
 
 %end;
 
@@ -447,7 +499,6 @@ run;
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~;
 
-%let table=dataset2;
 
 data CFB;
 	set &table;
@@ -578,7 +629,7 @@ run;
 			strip(put(count(distinct subject),8.0)) as col1, 
 			'Sample size' as stat,
 			-8 as statN 
-		from dataset2
+		from &table
 		where product < 1000;
 		;
 	quit;
@@ -614,7 +665,7 @@ proc sql;
 		put(parameter,parameterf.) as parameterC,
 		put(product,productf.) as productC,
 		put(time, timef.) as timeC
-	from DATASET2;
+	from &table;
 quit;
 
 proc transpose data=PARA_PROD_TPS out=PARA_PROD_TPS2;
@@ -636,12 +687,11 @@ data PARA_PROD_TPS2;
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~;
 
-data &out;
-	length stat $ 100;
+data &out.1;
+	length stat $ 100 col1 $ 50;
 	format statN statf. responder responderf.;
 	drop stat test _label_ _name_ value;
-	set __result 
-		Overall_Time_Effect5 
+	set __result  
 		STAT_NUM7 
 		__pvalue_4
 		sample_size 
@@ -650,6 +700,7 @@ data &out;
 		STAT_NUM_RAW
 		PARA_PROD_TPS2;
 run;
+
 
 *~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 9.
@@ -666,29 +717,51 @@ data pvalue_comp_prod;
 run;
 
 proc sql;
-	create table &out as
+	create table &out.2 as
 	select a.*, b.test, b.pvalue as pvalue2, b.conclusion
-	from &out as a left join pvalue_comp_prod as b
+	from &out.1 as a left join pvalue_comp_prod as b
 	on a.parameter=b.parameter and a.time = b.time;
 quit;
-
+	 
 *~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-9.
+11.
 	-	AJOUT DES EFFET EN POURCENATGE EN COLONNE
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~;
 
 proc sql;
-	create table &out as
+	create table &out.3 as
 	select *
-	from &out as a right join stat_num8 as b
+	from &out.2 as a left join stat_num8 as b
 	on a.parameter=b.parameter and a.time = b.time 
 ;
 quit;
 
-proc sort data=&out out=&out;
+*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+10.
+	-	AJOUT DES COMPARAISONS ENTRE PRODUIT EN COLONNE
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~;
+
+data &out.4;
+	set &out.3 Overall_Time_Effect5;
+run;
+
+proc sort data=&out.4 out=&out;
 	by parameter product time statN;
 run;
+
+
+*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+11. Affichage des différentes catégories pour la variable
+	filtre STATN 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~;
+
+proc sql;	
+	select distinct statN format 8.2, statN
+	from &out;
+quit; 
+
 
 %mend;
 
