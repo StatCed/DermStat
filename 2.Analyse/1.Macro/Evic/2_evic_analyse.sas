@@ -745,6 +745,8 @@ quit;
 
 data &out.4;
 	set &out.3 Overall_Time_Effect5;
+	*Variable charactère -> prob des formats audn n mélange les langue fr/ang;
+	statC=put(statN,statf.);
 run;
 
 proc sort data=&out.4 out=&out;
