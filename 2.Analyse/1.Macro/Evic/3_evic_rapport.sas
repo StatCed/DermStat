@@ -37,12 +37,11 @@ title 'Analyse descripitive';
 proc report data=&table_entree
 	style(column)= [just=center cellwidth=0.6in  fontsize=8 pt font_face=tahoma];	
 	where product < 1000 and statN in (11 12 13 13.5 14 15);
-	column ("Parameter" parameter) ("Product" product) ("Time" time) statN, (col1 n);
-	
+	column ("Parameter" parameter) ("Product" product) ("Time" time) statC, (col1 n);
 	define parameter 	/ ' '	group order=internal style(column)=[just=left cellwidth=1in];
 	define product 		/ ' '	group order=internal style(column)=[just=left cellwidth=1in];
 	define time 		/ ' '	group order=internal style(column)=[just=left cellwidth=1in];
-	define statN		/ ' '	across order=internal f=statf.;
+	define statC		/ ' '	across order=data;
 	define col1 		/ ' ' 	display;
 	define n 			/ 		noprint;
 run;
@@ -51,8 +50,8 @@ title 'Effet temps global';
 proc report data=&table_entree
 	style(column)= [just=center cellwidth=1in  fontsize=8 pt font_face=tahoma];	
 	where product < 1000 and (time=1 and statN=1)=1 or (test='Friedman');
-	column statN (Parameter), (Product), (time), (col1 n);
-	define statN		/ ' '	order group order=internal f=statf.;
+	column statC (Parameter), (Product), (time), (col1 n);
+	define statC		/ ' '	order group order=data;
 	define parameter 	/ ' '	across style(column)=[just=left cellwidth=1in];
 	define product 		/ ' '	across order=internal style(column)=[just=left cellwidth=1in];
 	define time 		/ ' '	across order=internal style(column)=[just=left cellwidth=1in] f=GlobalTimef.;
@@ -65,8 +64,8 @@ title "Variation par rapport à la valeur basale pour chaque produit - &&paraf&i"
 proc report data=&table_entree
 	style(column)= [just=center cellwidth=1in  fontsize=8 pt font_face=tahoma];		
 	where product<1000 and time >1000 and statN in (-8 6.75 7 8) and parameter=&par;
-	column  statN parameter, product, time, (col1 n);
-	define statN 		/ ' ' 	group order=internal f=statf.;
+	column  statC parameter, product, time, (col1 n);
+	define statC 		/ ' ' 	group order=data;
 	define parameter 	/' ' 	group across order=internal;
 	define time 		/ ' '	group across order=internal;
 	define product 		/ ' ' 	group across order=internal;
@@ -79,10 +78,10 @@ title 'Analyse comparative entre les produits';
 proc report data=&table_entree
 	style(column)= [just=center cellwidth=1in  fontsize=8 pt font_face=tahoma];		
 	where product>1000 and (time=1 or time >1000) and statN in (-10 -9 -8 6.75 7 8);
-	column  statN product, parameter, time, (col1 n);
-	define statN 	/ ' ' group order=internal f=statf.;
+	column statC product, parameter, time, (col1 n);
+	define statC 	/ ' ' group order=data;
 	define parameter /' ' group across order=internal;
-	define time 	/ ' '	group across order=internal;
+	define time 	/ ' ' group across order=internal;
 	define product 	/ ' ' group across order=internal;
 	define col1  	/ ' ' display center ;
 	define n		/ noprint;
@@ -110,6 +109,7 @@ proc univariate data=&raw_data normal;
 	label value ='Score';
 run;
 title;
+
 /*
 title 'Analyse comparative';
 
